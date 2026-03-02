@@ -49,3 +49,8 @@ po/*~
 rsconnect/
 
 /test
+
+# files
+*.pdf
+*.txt
+

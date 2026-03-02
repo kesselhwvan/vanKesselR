@@ -1,96 +1,92 @@
-#' Read Multiple Data Files from a Directory
+#' Read multiple files from a folder into a named list (optionally attach to an environment)
 #'
-#' Reads all supported data files from a specified directory and returns them
-#' as a named list or attaches them to the global environment. Files with
-#' duplicate names (different extensions) are automatically renamed with
-#' numeric suffixes.
+#' @description
+#' Reads all files in a directory whose extensions match \code{type}. Each file is read via
+#' \code{read_file()} and returned as a named list. Names are derived from the lowercased
+#' base filename without extension, made unique if duplicates occur. Optionally assigns the
+#' objects into \code{envir} and returns the object names invisibly.
 #'
-#' @param path A string specifying the directory path. Must be an existing
-#'   directory.
+#' @param path Character scalar. Path to an existing directory.
+#' @param attach Logical scalar. If \code{TRUE}, assigns the imported objects into \code{envir}
+#'   and returns the names invisibly. If \code{FALSE}, returns a named list.
+#' @param type Character vector. File types (extensions) to include. Supported values are
+#'   \code{"txt"}, \code{"csv"}, \code{"tsv"}, \code{"rds"}, \code{"fst"}, \code{"xlsx"}.
+#'   Matching is case-insensitive.
+#' @param df_as_tibble Logical scalar. Passed to \code{read_file()} to control whether data
+#'   frames are returned as tibbles.
+#' @param clean_names Logical scalar. Passed to \code{read_file()} to control whether column
+#'   names are cleaned.
+#' @param envir Environment. Target environment used when \code{attach = TRUE}. Defaults to
+#'   \code{parent.frame()}.
+#' @param ... Additional arguments forwarded to \code{read_file()}.
 #'
-#' @param attach A logical scalar. If `TRUE`, assigns all loaded files as
-#'   objects in the global environment and invisibly returns their names.
-#'   If `FALSE` (default), returns a named list. Default: `FALSE`.
-#'
-#' @param type A character vector of file types to read. Allowed values are:
-#'   "txt", "csv", "tsv", "rds", "fst", or "xlsx". Default includes all
-#'   supported types. Only files matching these extensions are loaded.
-#'
-#' @param ... Additional arguments passed to [read_file()], which forwards
-#'   them to the underlying read functions (e.g., sheet argument for xlsx).
-#'
-#' @returns
-#'   If `attach = FALSE`: A named list of data frames, where names are
-#'   derived from filenames (without extensions). Duplicate names are
-#'   suffixed with numbers (e.g., "iris", "iris1", "iris2").
-#'
-#'   If `attach = TRUE`: Invisibly returns a character vector of object
-#'   names assigned to the global environment.
+#' @return
+#' If \code{attach = FALSE}, a named list of imported objects. If \code{attach = TRUE},
+#' the character vector of object names is returned invisibly.
 #'
 #' @details
-#' Files are matched case-insensitively. Filenames are converted to lowercase
-#' and duplicates are resolved by appending numeric suffixes (e.g., "iris1",
-#' "iris2"). This handles cases where multiple file formats exist for the
-#' same dataset (e.g., iris.csv and iris.rds).
+#' Files are detected with \code{list.files()} using a regular expression built from \code{type}.
+#' Object names are computed as \code{make.unique(file_path_sans_ext(tolower(basename(file))))}.
+#' The function errors if \code{path} is not a valid existing directory or if inputs fail
+#' basic type and length checks.
 #'
-#' Each file is read using [read_file()], which applies optimized settings
-#' for the respective file format.
+#' @seealso
+#' \code{\link[base]{list.files}}, \code{\link[base]{list2env}}
 #'
 #' @examples
 #' \dontrun{
-#'   # Read all supported files from a directory
-#'   data_list <- read_folder("./data")
-#'
-#'   # Access individual datasets
-#'   iris_data <- data_list$iris
-#'
-#'   # Load files directly into environment
-#'   read_folder("./data", attach = TRUE)
-#'   # Now iris, setosa, etc. are available as objects
-#'
-#'   # Read only specific file types
-#'   csv_files <- read_folder("./data", type = c("csv", "tsv"))
-#'
-#'   # Pass arguments to underlying read functions
-#'   read_folder("./data", sheet = "Sheet1")
+#' x <- read_folder("data", type = c("csv", "xlsx"))
+#' read_folder("data", attach = TRUE, envir = .GlobalEnv)
 #' }
 #'
-#' @seealso
-#'   [read_file()] for reading individual files
-#'   [list2env()] for manual assignment to environment
-#'
 #' @export
-read_folder <- function(path = NULL, attach = FALSE, type = c("txt", "csv", "tsv", "rds", "fst", "xlsx"), ...){
-
-
-  stopifnot(
-    is.character(path),
-    length(path) == 1L,
-    !is.na(path),
-    nzchar(trimws(path)),
-    dir.exists(path)
-  )
-
-  stopifnot(is.logical(attach), length(attach) == 1L, !is.na(attach))
-  stopifnot(length(type) > 0L, is.character(type))
-
-  object <- list.files(
-    path = path,
-    pattern = paste0("\\.(", paste(tolower(type), collapse = "|"), ")$"),
-    full.names = TRUE,
-    ignore.case = TRUE
-  )
-
-  res <- purrr::map(
-    .x = stats::setNames(object = object,
-                         nm = make.unique(tools::file_path_sans_ext(tolower(basename(object))), sep = "")),
-    .f = ~read_file(.x, type = type, ...)
-  )
-
-  if (attach){
-    list2env(res, envir = .GlobalEnv)
-    invisible(names(res))
+read_folder <- function(path = NULL,
+                        attach = FALSE,
+                        type = c("txt", "csv", "tsv", "rds", "fst", "xlsx"),
+                        df_as_tibble = TRUE,
+                        clean_names = TRUE,
+                        envir = parent.frame(),
+                        ...){
+  # path
+  stopifnot(is.character(path),
+            length(path) == 1L,
+            !is.na(path),
+            dir.exists(path))
+  # attach
+  stopifnot(is.logical(attach),
+            length(attach) == 1L,
+            !is.na(attach))
+  # type
+  stopifnot(is.character(type),
+            length(type) > 0L,
+            all(!is.na(type)),
+            all(nzchar(trimws(type))),
+            all(type %in% c("txt", "csv", "tsv", "rds", "fst", "xlsx")))
+  # df_as_tibble
+  stopifnot(is.logical(df_as_tibble),
+            length(df_as_tibble) == 1L,
+            !is.na(df_as_tibble))
+  # clean_names
+  stopifnot(is.logical(clean_names),
+            length(clean_names) == 1L,
+            !is.na(clean_names))
+  # envir
+  stopifnot(is.environment(envir))
+  # file names in directory
+  name <- list.files(path = path,
+                     pattern = paste0("\\.(", paste(tolower(type), collapse = "|"), ")$"),
+                     full.names = TRUE,
+                     ignore.case = TRUE)
+  # read files
+  obj <- purrr::map(.x = stats::setNames(object = name,
+                                         nm = make.unique(tools::file_path_sans_ext(tolower(basename(name))), sep = "")),
+                    .f = ~read_file(.x, type = type, df_as_tibble = df_as_tibble, clean_names = clean_names, ...))
+  # return obj
+  if (isTRUE(attach)){
+    list2env(x = obj,
+             envir = envir)
+    invisible(names(obj))
   } else {
-    res
+    return(obj)
   }
 }

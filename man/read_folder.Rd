@@ -2,74 +2,62 @@
 % Please edit documentation in R/read_folder.R
 \name{read_folder}
 \alias{read_folder}
-\title{Read Multiple Data Files from a Directory}
+\title{Read multiple files from a folder into a named list (optionally attach to an environment)}
 \usage{
 read_folder(
   path = NULL,
   attach = FALSE,
   type = c("txt", "csv", "tsv", "rds", "fst", "xlsx"),
+  df_as_tibble = TRUE,
+  clean_names = TRUE,
+  envir = parent.frame(),
   ...
 )
 }
 \arguments{
-\item{path}{A string specifying the directory path. Must be an existing
-directory.}
+\item{path}{Character scalar. Path to an existing directory.}
 
-\item{attach}{A logical scalar. If \code{TRUE}, assigns all loaded files as
-objects in the global environment and invisibly returns their names.
-If \code{FALSE} (default), returns a named list. Default: \code{FALSE}.}
+\item{attach}{Logical scalar. If \code{TRUE}, assigns the imported objects into \code{envir}
+and returns the names invisibly. If \code{FALSE}, returns a named list.}
 
-\item{type}{A character vector of file types to read. Allowed values are:
-"txt", "csv", "tsv", "rds", "fst", or "xlsx". Default includes all
-supported types. Only files matching these extensions are loaded.}
+\item{type}{Character vector. File types (extensions) to include. Supported values are
+\code{"txt"}, \code{"csv"}, \code{"tsv"}, \code{"rds"}, \code{"fst"}, \code{"xlsx"}.
+Matching is case-insensitive.}
 
-\item{...}{Additional arguments passed to \code{\link[=read_file]{read_file()}}, which forwards
-them to the underlying read functions (e.g., sheet argument for xlsx).}
+\item{df_as_tibble}{Logical scalar. Passed to \code{read_file()} to control whether data
+frames are returned as tibbles.}
+
+\item{clean_names}{Logical scalar. Passed to \code{read_file()} to control whether column
+names are cleaned.}
+
+\item{envir}{Environment. Target environment used when \code{attach = TRUE}. Defaults to
+\code{parent.frame()}.}
+
+\item{...}{Additional arguments forwarded to \code{read_file()}.}
 }
 \value{
-If \code{attach = FALSE}: A named list of data frames, where names are
-derived from filenames (without extensions). Duplicate names are
-suffixed with numbers (e.g., "iris", "iris1", "iris2").
-
-If \code{attach = TRUE}: Invisibly returns a character vector of object
-names assigned to the global environment.
+If \code{attach = FALSE}, a named list of imported objects. If \code{attach = TRUE},
+the character vector of object names is returned invisibly.
 }
 \description{
-Reads all supported data files from a specified directory and returns them
-as a named list or attaches them to the global environment. Files with
-duplicate names (different extensions) are automatically renamed with
-numeric suffixes.
+Reads all files in a directory whose extensions match \code{type}. Each file is read via
+\code{read_file()} and returned as a named list. Names are derived from the lowercased
+base filename without extension, made unique if duplicates occur. Optionally assigns the
+objects into \code{envir} and returns the object names invisibly.
 }
 \details{
-Files are matched case-insensitively. Filenames are converted to lowercase
-and duplicates are resolved by appending numeric suffixes (e.g., "iris1",
-"iris2"). This handles cases where multiple file formats exist for the
-same dataset (e.g., iris.csv and iris.rds).
-
-Each file is read using \code{\link[=read_file]{read_file()}}, which applies optimized settings
-for the respective file format.
+Files are detected with \code{list.files()} using a regular expression built from \code{type}.
+Object names are computed as \code{make.unique(file_path_sans_ext(tolower(basename(file))))}.
+The function errors if \code{path} is not a valid existing directory or if inputs fail
+basic type and length checks.
 }
 \examples{
 \dontrun{
-  # Read all supported files from a directory
-  data_list <- read_folder("./data")
-
-  # Access individual datasets
-  iris_data <- data_list$iris
-
-  # Load files directly into environment
-  read_folder("./data", attach = TRUE)
-  # Now iris, setosa, etc. are available as objects
-
-  # Read only specific file types
-  csv_files <- read_folder("./data", type = c("csv", "tsv"))
-
-  # Pass arguments to underlying read functions
-  read_folder("./data", sheet = "Sheet1")
+x <- read_folder("data", type = c("csv", "xlsx"))
+read_folder("data", attach = TRUE, envir = .GlobalEnv)
 }
 
 }
 \seealso{
-\code{\link[=read_file]{read_file()}} for reading individual files
-\code{\link[=list2env]{list2env()}} for manual assignment to environment
+\code{\link[base]{list.files}}, \code{\link[base]{list2env}}
 }

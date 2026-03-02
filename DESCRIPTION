@@ -12,11 +12,12 @@ Suggests:
     testthat (>= 3.0.0)
 Config/testthat/edition: 3
 Imports: 
-    cli,
     data.table,
     fst,
+    janitor,
     parallel,
     purrr,
-    readxl
+    readxl,
+    tibble
 Depends: 
     R (>= 3.5)

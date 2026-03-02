@@ -2,54 +2,61 @@
 % Please edit documentation in R/read_file.R
 \name{read_file}
 \alias{read_file}
-\title{Read Data Files}
+\title{Read a single file into R based on its extension}
 \usage{
 read_file(
   path = NULL,
   type = c("txt", "csv", "tsv", "rds", "fst", "xlsx"),
+  df_as_tibble = TRUE,
+  clean_names = TRUE,
   ...
 )
 }
 \arguments{
-\item{path}{A string specifying the file path. Must be a single existing file.}
+\item{path}{Character scalar. Path to an existing file.}
 
-\item{type}{A character vector of supported file types. Allowed values are:
-"txt", "csv", "tsv", "rds", "fst", or "xlsx". Default includes all
-supported types. An error is raised if unsupported types are specified.}
+\item{type}{Character vector. Allowed file types (extensions). Supported values are
+\code{"txt"}, \code{"csv"}, \code{"tsv"}, \code{"rds"}, \code{"fst"}, \code{"xlsx"}.
+This parameter validates allowed extensions; the actual reader is chosen by the file's
+extension extracted from \code{path}.}
 
-\item{...}{Additional arguments passed to the underlying read function:
-\itemize{
-\item For xlsx files: passed to \code{\link[readxl:read_excel]{readxl::read_xlsx()}}
-\item For other formats: ignored
-}}
+\item{df_as_tibble}{Logical scalar. If \code{TRUE} and the imported object inherits from
+\code{"data.frame"}, converts it to a tibble via \code{tibble::as_tibble()}. If row names
+exist, they are preserved in a column named \code{"rowname"}.}
+
+\item{clean_names}{Logical scalar. If \code{TRUE} and the imported object inherits from
+\code{"data.frame"}, cleans column names using \code{janitor::clean_names()}.}
+
+\item{...}{Additional arguments forwarded to \code{readxl::read_xlsx()} when reading
+\code{.xlsx} files. Ignored for other file types.}
 }
 \value{
-A data frame containing the file data.
+An R object produced by the relevant file reader. For tabular inputs, this is typically a
+\code{data.frame} or tibble depending on \code{df_as_tibble}. For \code{.rds} it is the
+stored R object. For \code{.fst} it is the object returned by \code{fst::read_fst()}.
 }
 \description{
-Reads data from various file formats (txt, csv, tsv, rds, fst, xlsx) with
-optimized settings for tabular data. Text-based formats (txt, csv, tsv) are
-read using \code{\link[data.table:fread]{data.table::fread()}} with multi-threading support.
+Reads a single file from disk and returns its contents. The file type is inferred from the
+filename extension. Tabular text files are read with \code{data.table::fread()}, RDS files
+with \code{readRDS()}, FST files with \code{fst::read_fst()}, and Excel files with
+\code{readxl::read_xlsx()}. Optional post-processing converts data frames to tibbles and
+optionally standardizes column names.
 }
 \details{
-For text-based files (txt, csv, tsv), \code{\link[data.table:openmp-utils]{data.table::setDTthreads()}} can be
-configured to use more threads for improved performance.
-Empty strings are treated as \code{NA}.
+The function validates that \code{path} exists and that \code{type} is restricted to a known
+set of extensions. The read method is selected solely via \code{tools::file_ext(path)}.
+If \code{clean_names = TRUE}, column-name cleaning occurs after optional tibble conversion.
 }
 \examples{
 \dontrun{
-  # Read a CSV file
-  df <- read_file("data.csv")
-
-  # Read an Excel file with specific sheet
-  df <- read_file("data.xlsx", sheet = "Sheet1")
-
-  # Read an RDS file
-  df <- read_file("data.rds")
+d1 <- read_file("data/example.csv")
+d2 <- read_file("data/example.xlsx", sheet = 2)
+m  <- read_file("models/fit.rds", df_as_tibble = FALSE)
 }
 
 }
 \seealso{
-\code{\link[data.table:fread]{data.table::fread()}} for CSV/TSV reading options
-\code{\link[readxl:read_excel]{readxl::read_xlsx()}} for Excel reading options
+\code{\link[tools]{file_ext}}, \code{\link[data.table]{fread}}, \code{\link[base]{readRDS}},
+\code{\link[fst]{read_fst}}, \code{\link[readxl]{read_xlsx}}, \code{\link[tibble]{as_tibble}},
+\code{\link[janitor]{clean_names}}
 }
