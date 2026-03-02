@@ -47,7 +47,6 @@ read_file <- function(path = NULL, type = c("txt", "csv", "tsv", "rds", "fst", "
   if (!all(type %in% c("txt", "csv", "tsv", "rds", "fst", "xlsx"))) cli::cli_abort(message = "Unsupported type provided")
 
   if (any(ext %in% c("txt", "csv", "tsv"))){
-    data.table::setDTthreads(max(1L, parallel::detectCores() - 1L))
     return(data.table::fread(file = path, na.strings = "", showProgress = FALSE, data.table = FALSE, encoding = "UTF-8"))
   }
 
