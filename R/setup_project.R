@@ -50,7 +50,7 @@
 
 
 
-setup_project(folder = "C:/Users/hwvan/Documents/projects/new")
+# setup_project(folder = "C:/Users/hwvan/Documents/projects/new")
 
 
-getwd()
+# getwd()
